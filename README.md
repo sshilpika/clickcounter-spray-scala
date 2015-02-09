@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/sshilpika/clickcounter-spray-scala.svg?branch=master)](https://travis-ci.org/sshilpika/clickcounter-spray-scala)
+
+
+
 clickcounter-spray-scala
 ========================
 
