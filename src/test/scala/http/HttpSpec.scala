@@ -1,4 +1,4 @@
-package edu.luc.etl.cs313.scala.clickcounter.service.http
+package edu.luc.etl.cs313.scala.clickcounter.service
 
 import org.specs2.matcher.JsonMatchers
 import org.specs2.mutable._
