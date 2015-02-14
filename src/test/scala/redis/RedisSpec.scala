@@ -1,4 +1,4 @@
-package edu.luc.etl.cs313.scala.clickcounter.service.redis
+package edu.luc.etl.cs313.scala.clickcounter.service
 
 import java.net.URI
 import scala.util.Properties
@@ -15,7 +15,7 @@ class RedisSpec extends Specification {
       println("userInfo = " + url.getUserInfo)
       val client = new RedisClient(url.getHost, url.getPort)
       if (url.getUserInfo != null) {
-        client.auth(url.getUserInfo)
+        client.auth(url.getUserInfo.split(":", 2)(1))
       }
       val key = "hello"
       val value = "world"
