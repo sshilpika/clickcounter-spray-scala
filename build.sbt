@@ -20,10 +20,13 @@ libraryDependencies ++= {
 }
 
 libraryDependencies ++= Seq(
-  "net.debasishg" %% "redisclient" % "2.13",
-  "net.databinder.dispatch" %% "dispatch-core" % "0.11.+" % Test
+  "net.debasishg" %% "redisclient" % "2.14",
+  "net.databinder.dispatch" %% "dispatch-core" % "0.11.2" % Test
 )
 
 libraryDependencies ++= Seq(
-  "org.slf4j" % "slf4j-simple" % "1.7.+"
+  "org.slf4j" % "slf4j-simple" % "1.7.10"
 )
+
+// IntelliJ Scala plugin reports false positive error here
+enablePlugins(JavaAppPackaging)
