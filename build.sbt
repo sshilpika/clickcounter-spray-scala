@@ -30,3 +30,5 @@ libraryDependencies ++= Seq(
 
 // IntelliJ Scala plugin reports false positive error here
 enablePlugins(JavaAppPackaging)
+
+Revolver.settings
