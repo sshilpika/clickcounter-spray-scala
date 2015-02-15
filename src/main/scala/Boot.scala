@@ -14,7 +14,7 @@ object Boot extends App {
   implicit val system = ActorSystem("clickcounter")
 
   // create and start our service actor
-  val service = system.actorOf(Props[MyServiceActor], "clickcounter-service")
+  val service = system.actorOf(Props[ClickcounterServiceActor], "clickcounter-service")
 
   implicit val timeout = Timeout(5.seconds)
   // start a new HTTP server on port 8080 with our service actor as the handler

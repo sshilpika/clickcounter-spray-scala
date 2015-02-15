@@ -1,13 +1,18 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 
+import java.net.URI
+
 import akka.actor.Actor
+import com.redis.RedisClient
 import spray.routing._
 import spray.http._
 import MediaTypes._
 
+import scala.util.Properties
+
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
-class MyServiceActor extends Actor with ClickcounterService {
+class ClickcounterServiceActor extends Actor with ClickcounterService {
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -22,6 +27,12 @@ class MyServiceActor extends Actor with ClickcounterService {
 // this trait defines our service behavior independently from the service actor
 trait ClickcounterService extends HttpService {
 
+  val url = new URI(Properties.envOrElse("REDISCLOUD_URL", "redis://localhost:6379"))
+  val client = new RedisClient(url.getHost, url.getPort)
+  if (url.getUserInfo != null) {
+    client.auth(url.getUserInfo.split(":", 2)(1))
+  }
+
   val myRoute =
     path("") {
       get {
@@ -34,6 +45,18 @@ trait ClickcounterService extends HttpService {
             </html>
           }
         }
+      }
+    } ~
+    path("put" / IntNumber) { i =>
+      complete {
+        client.set("asd", i)
+        "put " + i
+      }
+    } ~
+    path("get") {
+      complete {
+        val i = client.get("asd")
+        "got " + i
       }
     }
 }
