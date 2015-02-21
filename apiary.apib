@@ -85,22 +85,6 @@ The resource for resetting this counter
 
             { "id": "123", "value": 0, "state": "empty" }
 
-## Counter value [/counters/{id}/value]
-The current value of this counter
-
-+ Parameters
-    + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
-
-### Retrieve a counter value [GET]
-+ Response 200 (text/plain)
-    + Header
-
-            Content-Length: 1
-
-    + Body
-    
-            3
-
 ## Counter value stream [/counters/{id}/stream]
 The event stream of this counter's values 
 
