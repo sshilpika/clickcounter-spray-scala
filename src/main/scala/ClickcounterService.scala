@@ -61,7 +61,12 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
 
   // TODO isolate all Redis stuff in a DAO
 
-  val REDIS_KEY_SCHEMA = "edu.luc.etl.cs313.scala.clickcounter:"
+  object dao {
+    val REDIS_KEY_SCHEMA = "edu.luc.etl.cs313.scala.clickcounter:"
+    def set(id: String, counter: Counter): Boolean = redis.set(REDIS_KEY_SCHEMA + id, counter)
+    def del(id: String): Option[Long] = redis.del(REDIS_KEY_SCHEMA + id)
+    def get(id: String): Option[Counter] = redis.get[Counter](REDIS_KEY_SCHEMA + id)
+  }
 
   val myRoute =
     pathEndOrSingleSlash {
@@ -78,14 +83,16 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
       }
     } ~
     pathPrefix("counters" / Segment) { id =>
-      val key = REDIS_KEY_SCHEMA + id
       pathEnd {
         put {
           requestUri { uri =>
             def createIt(counter: Counter) = {
-              redis.set(key, counter)
-              val loc = uri.copy(query = Uri.Query.Empty)
-              complete(StatusCodes.Created, HttpHeaders.Location(loc) :: Nil, "")
+              if (dao.set(id, counter)) {
+                val loc = uri.copy(query = Uri.Query.Empty)
+                complete(StatusCodes.Created, HttpHeaders.Location(loc) :: Nil, "")
+              } else {
+                complete(StatusCodes.InternalServerError)
+              }
             }
             parameters('min, 'max) { (min, max) =>
               createIt(Counter(min.toInt, min.toInt, max.toInt))
@@ -97,7 +104,7 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
         } ~
         delete {
           complete {
-            redis.del(key) match {
+            dao.del(id) match {
               case Some(_) => StatusCodes.NoContent
               case _ => StatusCodes.NotFound
             }
@@ -105,7 +112,7 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
         } ~
         get {
           complete {
-            redis.get[Counter](key) match {
+            dao.get(id) match {
               case Some(c @ Counter(min, value, max)) => c
               case _ => StatusCodes.NotFound
             }
@@ -114,11 +121,11 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
       } ~ {
         def updateIt(f: Int => Int) =
           complete {
-            redis.get[Counter](key) match {
+            dao.get(id) match {
               case Some(c @ Counter(min, value, max)) =>
                 Try { Counter(min, f(value), max) } match {
                   case Success(newCounter) =>
-                    redis.set(key, newCounter)
+                    dao.set(id, newCounter)
                     newCounter
                   case _ => StatusCodes.PreconditionFailed
                 }
@@ -136,7 +143,9 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
           }
         } ~
         path("stream") {
-          ???
+          get {
+            complete(StatusCodes.NotImplemented)
+          }
         }
       }
     }
