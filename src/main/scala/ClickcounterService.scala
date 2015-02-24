@@ -1,6 +1,6 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 
-import scala.util.{Properties, Try}
+import scala.util.{Properties, Try, Success}
 import java.net.URI
 import com.redis.RedisClient
 import akka.actor.Actor
@@ -61,6 +61,8 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
 
   // TODO isolate all Redis stuff in a DAO
 
+  val REDIS_KEY_SCHEMA = "edu.luc.etl.cs313.scala.clickcounter:"
+
   val myRoute =
     pathEndOrSingleSlash {
       get {
@@ -75,47 +77,66 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
         }
       }
     } ~
-    pathPrefix("counters") {
-      pathEndOrSingleSlash {
-        post {
-          // TODO store last used key as a key/value pair instead of looking up all matching keys
+    pathPrefix("counters" / Segment) { id =>
+      val key = REDIS_KEY_SCHEMA + id
+      pathEnd {
+        put {
           requestUri { uri =>
-            val keys = for {
-              keys <- redis.keys[String]("*").get
-              k <- keys
-              i <- Try(k.toInt).toOption
-            } yield i
-            val newKey = keys.max + 1
-            redis.set(newKey, Counter(0, 0, 5))
-            val newLocation = uri.withPath(uri.path + newKey.toString)
-            complete(StatusCodes.Created, HttpHeaders.Location(newLocation) :: Nil, newKey.toString)
-          }
-        }
-      } ~
-      pathPrefix(IntNumber) { id =>
-        val c @ Counter(min, value, max) = redis.get[Counter](id).get
-        pathEnd {
-          get {
-            complete { c }
+            def createIt(counter: Counter) = {
+              redis.set(key, counter)
+              val loc = uri.copy(query = Uri.Query.Empty)
+              complete(StatusCodes.Created, HttpHeaders.Location(loc) :: Nil, "")
+            }
+            parameters('min, 'max) { (min, max) =>
+              createIt(Counter(min.toInt, min.toInt, max.toInt))
+            } ~
+            entity(as[Counter]) { c =>
+              createIt(c)
+            }
           }
         } ~
+        delete {
+          complete {
+            redis.del(key) match {
+              case Some(_) => StatusCodes.NoContent
+              case _ => StatusCodes.NotFound
+            }
+          }
+        } ~
+        get {
+          complete {
+            redis.get[Counter](key) match {
+              case Some(c @ Counter(min, value, max)) => c
+              case _ => StatusCodes.NotFound
+            }
+          }
+        }
+      } ~ {
+        def updateIt(f: Int => Int) =
+          complete {
+            redis.get[Counter](key) match {
+              case Some(c @ Counter(min, value, max)) =>
+                Try { Counter(min, f(value), max) } match {
+                  case Success(newCounter) =>
+                    redis.set(key, newCounter)
+                    newCounter
+                  case _ => StatusCodes.PreconditionFailed
+                }
+              case _ => StatusCodes.NotFound
+            }
+          }
         path("increment") {
           post {
-            complete {
-              val newCounter = Counter(min, value + 1, max)
-              redis.set(id, newCounter)
-              newCounter
-            }
+            updateIt(_ + 1)
           }
         } ~
         path("decrement") {
           post {
-            complete {
-              val newCounter = Counter(min, value - 1, max)
-              redis.set(id, newCounter)
-              newCounter
-            }
+            updateIt(_ - 1)
           }
+        } ~
+        path("stream") {
+          ???
         }
       }
     }
