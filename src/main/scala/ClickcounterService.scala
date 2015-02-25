@@ -31,6 +31,7 @@ class ClickcounterServiceActor extends Actor with ClickcounterService {
 
   import context.dispatcher
 
+  /** Execution context required by the nonblocking Redis client. */
   val ec = dispatcher
 }
 
@@ -51,6 +52,7 @@ case class Counter(min: Int, value: Int, max: Int) {
 // this trait defines our service behavior independently from the service actor
 trait ClickcounterService extends HttpService with SprayJsonSupport with DefaultJsonProtocol {
 
+  /** Excecution context required for the futures of the nonblocking Redis client. */
   implicit val ec: ExecutionContext
 
   /** Serialization from Counter to JSON string for spray HTTP responses. */
