@@ -1,5 +1,7 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 
+import spray.routing.directives.OnCompleteFutureMagnet
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Properties, Try, Failure, Success}
 import java.net.URI
@@ -78,6 +80,14 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
     def get(id: String): Future[Option[Counter]] = redis.get[Counter](REDIS_KEY_SCHEMA + id)
   }
 
+  val daoErrorHandler: PartialFunction[Any, Route] = {
+    case Success(_) => complete(StatusCodes.NotFound)
+    case _ => complete(StatusCodes.InternalServerError)
+  }
+
+  def onCompleteWithDaoErrorHandler[T](m: OnCompleteFutureMagnet[T])(body: PartialFunction[Try[T], Route]) =
+    onComplete(m)(body orElse daoErrorHandler)
+
   val myRoute =
     pathEndOrSingleSlash {
       get {
@@ -97,12 +107,10 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
         put {
           requestUri { uri =>
             def createIt(counter: Counter) =
-              onComplete(dao.set(id, counter)) {
+              onCompleteWithDaoErrorHandler(dao.set(id, counter)) {
                 case Success(true) =>
                   val loc = uri.copy(query = Uri.Query.Empty)
                   complete(StatusCodes.Created, HttpHeaders.Location(loc) :: Nil, counter)
-                case _ =>
-                  complete(StatusCodes.InternalServerError)
               }
             parameters('min, 'max) { (min, max) =>
               createIt(Counter(min.toInt, min.toInt, max.toInt))
@@ -113,22 +121,18 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
           }
         } ~
         delete {
-          onComplete(dao.del(id)) {
+          onCompleteWithDaoErrorHandler(dao.del(id)) {
             case Success(1) => complete(StatusCodes.NoContent)
-            case Success(_) => complete(StatusCodes.NotFound)
-            case _ => complete(StatusCodes.InternalServerError)
           }
         } ~
         get {
-          onComplete(dao.get(id)) {
+          onCompleteWithDaoErrorHandler(dao.get(id)) {
             case Success(Some(c @ Counter(min, value, max))) => complete(c)
-            case Success(_) => complete(StatusCodes.NotFound)
-            case _ => complete(StatusCodes.InternalServerError)
           }
         }
       } ~ {
         def updateIt(f: Int => Int) =
-          onComplete(dao.get(id)) {
+          onCompleteWithDaoErrorHandler(dao.get(id)) {
             case Success(Some(c @ Counter(min, value, max))) =>
               Try { Counter(min, f(value), max) } match {
                 case Success(newCounter) =>
@@ -136,8 +140,6 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
                   complete(newCounter)
                 case _ => complete(StatusCodes.PreconditionFailed)
               }
-            case Success(_) => complete(StatusCodes.NotFound)
-            case _ => complete(StatusCodes.InternalServerError)
           }
         path("increment") {
           post {
