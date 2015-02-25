@@ -1,8 +1,10 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 
-import scala.util.{Properties, Try, Success}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Properties, Try, Failure, Success}
 import java.net.URI
-import com.redis.RedisClient
+import scredis._
+import scredis.serialization.{Reader, Writer}
 import akka.actor.Actor
 import spray.routing._
 import spray.http._
@@ -24,6 +26,10 @@ class ClickcounterServiceActor extends Actor with ClickcounterService {
   // other things here, like request stream processing
   // or timeout handling
   def receive = runRoute(myRoute)
+
+  import context.dispatcher
+
+  val ec = dispatcher
 }
 
 sealed trait State
@@ -43,29 +49,33 @@ case class Counter(min: Int, value: Int, max: Int) {
 // this trait defines our service behavior independently from the service actor
 trait ClickcounterService extends HttpService with SprayJsonSupport with DefaultJsonProtocol {
 
+  implicit val ec: ExecutionContext
+
   /** Serialization from Counter to JSON string for spray HTTP responses. */
   implicit val sprayCounterFormat = jsonFormat3(Counter.apply)
 
-  val pf: PartialFunction[Any, Any] = { case c: Counter => sprayCounterFormat.write(c).toString }
   /** Serialization from Counter to JSON string for Redis set. */
-  implicit val redisCounterFormat = new com.redis.serialization.Format(pf)
+  implicit val redisCounterWriter = new Writer[Counter] {
+    override def writeImpl(value: Counter): Array[Byte] = sprayCounterFormat.write(value).toString.getBytes
+  }
+
   /** Parsing of JSON string as Counter for Redis get. */
-  implicit val redisCounterParse = com.redis.serialization.Parse[Counter](new String(_).parseJson.convertTo[Counter])
+  implicit val redisCounterReader = new Reader[Counter] {
+    override def readImpl(bytes: Array[Byte]): Counter = new String(bytes).parseJson.convertTo[Counter]
+  }
 
   val url = new URI(Properties.envOrElse("REDISCLOUD_URL", "redis://localhost:6379"))
-  val redis = new RedisClient(url.getHost, url.getPort)
+  val redis = Redis(url.getHost, url.getPort)
   if (url.getUserInfo != null) {
     val secret = url.getUserInfo.split(':')(1)
     redis.auth(secret)
   }
 
-  // TODO isolate all Redis stuff in a DAO
-
   object dao {
     val REDIS_KEY_SCHEMA = "edu.luc.etl.cs313.scala.clickcounter:"
-    def set(id: String, counter: Counter): Boolean = redis.set(REDIS_KEY_SCHEMA + id, counter)
-    def del(id: String): Option[Long] = redis.del(REDIS_KEY_SCHEMA + id)
-    def get(id: String): Option[Counter] = redis.get[Counter](REDIS_KEY_SCHEMA + id)
+    def set(id: String, counter: Counter): Future[Boolean] = redis.set(REDIS_KEY_SCHEMA + id, counter)
+    def del(id: String): Future[Long] = redis.del(REDIS_KEY_SCHEMA + id)
+    def get(id: String): Future[Option[Counter]] = redis.get[Counter](REDIS_KEY_SCHEMA + id)
   }
 
   val myRoute =
@@ -86,14 +96,14 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
       pathEnd {
         put {
           requestUri { uri =>
-            def createIt(counter: Counter) = {
-              if (dao.set(id, counter)) {
-                val loc = uri.copy(query = Uri.Query.Empty)
-                complete(StatusCodes.Created, HttpHeaders.Location(loc) :: Nil, "")
-              } else {
-                complete(StatusCodes.InternalServerError)
+            def createIt(counter: Counter) =
+              onComplete(dao.set(id, counter)) {
+                case Success(true) =>
+                  val loc = uri.copy(query = Uri.Query.Empty)
+                  complete(StatusCodes.Created, HttpHeaders.Location(loc) :: Nil, counter)
+                case _ =>
+                  complete(StatusCodes.InternalServerError)
               }
-            }
             parameters('min, 'max) { (min, max) =>
               createIt(Counter(min.toInt, min.toInt, max.toInt))
             } ~
@@ -103,34 +113,31 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
           }
         } ~
         delete {
-          complete {
-            dao.del(id) match {
-              case Some(_) => StatusCodes.NoContent
-              case _ => StatusCodes.NotFound
-            }
+          onComplete(dao.del(id)) {
+            case Success(1) => complete(StatusCodes.NoContent)
+            case Success(_) => complete(StatusCodes.NotFound)
+            case _ => complete(StatusCodes.InternalServerError)
           }
         } ~
         get {
-          complete {
-            dao.get(id) match {
-              case Some(c @ Counter(min, value, max)) => c
-              case _ => StatusCodes.NotFound
-            }
+          onComplete(dao.get(id)) {
+            case Success(Some(c @ Counter(min, value, max))) => complete(c)
+            case Success(_) => complete(StatusCodes.NotFound)
+            case _ => complete(StatusCodes.InternalServerError)
           }
         }
       } ~ {
         def updateIt(f: Int => Int) =
-          complete {
-            dao.get(id) match {
-              case Some(c @ Counter(min, value, max)) =>
-                Try { Counter(min, f(value), max) } match {
-                  case Success(newCounter) =>
-                    dao.set(id, newCounter)
-                    newCounter
-                  case _ => StatusCodes.PreconditionFailed
-                }
-              case _ => StatusCodes.NotFound
-            }
+          onComplete(dao.get(id)) {
+            case Success(Some(c @ Counter(min, value, max))) =>
+              Try { Counter(min, f(value), max) } match {
+                case Success(newCounter) =>
+                  dao.set(id, newCounter)
+                  complete(newCounter)
+                case _ => complete(StatusCodes.PreconditionFailed)
+              }
+            case Success(_) => complete(StatusCodes.NotFound)
+            case _ => complete(StatusCodes.InternalServerError)
           }
         path("increment") {
           post {
