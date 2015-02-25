@@ -12,7 +12,7 @@ import spray.routing._
 import spray.http._
 import MediaTypes._
 import spray.httpx.SprayJsonSupport
-import spray.httpx.marshalling.ToResponseMarshaller
+import spray.httpx.marshalling.ToResponseMarshallable
 import spray.json._
 
 
@@ -78,6 +78,25 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
     def set(id: String, counter: Counter): Future[Boolean] = redis.set(REDIS_KEY_SCHEMA + id, counter)
     def del(id: String): Future[Long] = redis.del(REDIS_KEY_SCHEMA + id)
     def get(id: String): Future[Option[Counter]] = redis.get[Counter](REDIS_KEY_SCHEMA + id)
+    def update(id: String, f: Int => Int): Future[ToResponseMarshallable] = {
+      val key = REDIS_KEY_SCHEMA + id
+      redis.watch(key)
+      val future1 = redis.get[Counter](key)
+      future1 flatMap {
+        case Some(c @ Counter(min, value, max)) =>
+          Try { Counter(min, f(value), max) } match {
+            case Success(newCounter) =>
+              redis.withTransaction { t =>
+                t.set(key, newCounter)
+              } flatMap {
+                case true => Future { newCounter }
+                case false => Future { StatusCodes.InternalServerError }
+              }
+            case Failure(_) => Future { StatusCodes.PreconditionFailed }
+          }
+        case None => Future { StatusCodes.NotFound }
+      }
+    }
   }
 
   val daoErrorHandler: PartialFunction[Any, Route] = {
@@ -91,7 +110,7 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
   val myRoute =
     pathEndOrSingleSlash {
       get {
-        respondWithMediaType(`text/html`) { // XML is marshalled to `text/xml` by default, so we simply override here
+        respondWithMediaType(`text/html`) {
           complete {
             <html>
               <body>
@@ -132,14 +151,8 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
         }
       } ~ {
         def updateIt(f: Int => Int) =
-          onCompleteWithDaoErrorHandler(dao.get(id)) {
-            case Success(Some(c @ Counter(min, value, max))) =>
-              Try { Counter(min, f(value), max) } match {
-                case Success(newCounter) =>
-                  dao.set(id, newCounter)
-                  complete(newCounter)
-                case _ => complete(StatusCodes.PreconditionFailed)
-              }
+          onCompleteWithDaoErrorHandler(dao.update(id, f)) {
+            case Success(r) => complete(r)
           }
         path("increment") {
           post {
