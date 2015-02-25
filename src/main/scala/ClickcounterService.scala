@@ -83,8 +83,7 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
     def update(id: String, f: Int => Int): Future[ToResponseMarshallable] = {
       val key = REDIS_KEY_SCHEMA + id
       redis.watch(key)
-      val future1 = redis.get[Counter](key)
-      future1 flatMap {
+      redis.get[Counter](key) flatMap {
         case Some(c @ Counter(min, value, max)) =>
           Try { Counter(min, f(value), max) } match {
             case Success(newCounter) =>
