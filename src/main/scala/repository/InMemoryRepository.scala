@@ -9,7 +9,7 @@ import model.Counter
 
 
 /** Fake thread-safe in-memory repository for unit testing. */
-trait InMemoryRepository extends Repository {
+class InMemoryRepository extends Repository {
 
   private val data = Map.empty[String, Counter]
 

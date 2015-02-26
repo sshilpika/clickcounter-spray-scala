@@ -12,11 +12,10 @@ import spray.routing.directives.OnCompleteFutureMagnet
 import scala.util.{Success, Try}
 import model.Counter
 import common.Repository
-import repository.RedisRepository
+import repository.RedisRepositoryProvider
 
-// we don't implement our route structure directly in the service actor because
-// we want to be able to test it independently, without having to spin up an actor
-class ClickcounterServiceActor extends Actor with ClickcounterService with RedisRepository {
+/** Actor-based wrapper for our API service. */
+class ClickcounterServiceActor extends Actor with ClickcounterService with RedisRepositoryProvider {
 
   // the HttpService trait defines only one abstract member, which
   // connects the services environment to the enclosing actor or test
@@ -31,7 +30,10 @@ class ClickcounterServiceActor extends Actor with ClickcounterService with Redis
   lazy val ec = context.dispatcher
 }
 
-// this trait defines our service behavior independently from the service actor
+/**
+ * Defines our service behavior independently from the service actor.
+ * Defines the `sprayCounterFormat` possibly required by the repository provider.
+ */
 trait ClickcounterService extends HttpService with SprayJsonSupport with DefaultJsonProtocol with NeedsExecutionContext {
 
   /** Injected dependency on Counter repository. */
