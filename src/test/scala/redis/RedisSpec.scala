@@ -2,7 +2,7 @@ package edu.luc.etl.cs313.scala.clickcounter.service
 
 import java.net.URI
 import scala.util.Properties
-import com.redis._
+import scredis._
 import org.specs2.mutable.Specification
 
 class RedisSpec extends Specification {
@@ -13,14 +13,14 @@ class RedisSpec extends Specification {
       println("url = " + url)
       println("auth = " + url.getAuthority)
       println("userInfo = " + url.getUserInfo)
-      val client = new RedisClient(url.getHost, url.getPort)
+      val client = new Redis(url.getHost, url.getPort)
       if (url.getUserInfo != null) {
         client.auth(url.getUserInfo.split(":", 2)(1))
       }
       val key = "hello"
       val value = "world"
       client.set(key, value)
-      client.get(key) must beSome(value)
+      client.get(key) must beSome(value).await
     }
   }
 }
