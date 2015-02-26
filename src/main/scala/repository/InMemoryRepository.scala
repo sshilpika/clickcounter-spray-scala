@@ -7,6 +7,10 @@ import scala.util.{Failure, Success, Try}
 import common.Repository
 import model.Counter
 
+/** Stackable mixin trait that provides a fake in-memory repository. */
+trait InMemoryRepositoryProvider {
+  lazy val repository = new InMemoryRepository
+}
 
 /** Fake thread-safe in-memory repository for unit testing. */
 class InMemoryRepository extends Repository {

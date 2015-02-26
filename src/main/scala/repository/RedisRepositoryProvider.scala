@@ -14,7 +14,7 @@ import common._
  * Stackable mixin trait that provides a Redis repository and
  * requires a `sprayCounterFormat` and an execution context.
  */
-trait RedisRepositoryProvider extends NeedsExecutionContext {
+trait RedisRepositoryProvider {
 
   /** Serialization between Counter and JSON string provided by spray service. */
   implicit def sprayCounterFormat: RootJsonFormat[Counter]
@@ -41,6 +41,8 @@ trait RedisRepositoryProvider extends NeedsExecutionContext {
 
   object repository extends Repository {
 
+    import redis.dispatcher
+
     override def keys = redis.keys(REDIS_KEY_SCHEMA + "*")
 
     override def set(id: String, counter: Counter) = redis.set(REDIS_KEY_SCHEMA + id, counter)
@@ -57,23 +59,25 @@ trait RedisRepositoryProvider extends NeedsExecutionContext {
      */
     override def update(id: String, f: Int => Int) = {
       val key = REDIS_KEY_SCHEMA + id
-      redis.watch(key) // lock key optimistically
-      redis.get[Counter](key) flatMap {
-        case Some(c@Counter(min, value, max)) =>
-          // found item, attempt update
-          Try {
-            Counter(min, f(value), max)
-          } match {
-            case Success(newCounter) =>
-              // map Future[Boolean] to Future[Option[Boolean]]
-              redis.withTransaction { t => t.set(key, newCounter)} map {
-                Some(_)
-              }
-            case Failure(_) =>
-              // precondition for update not met
-              Future.successful(Some(false))
-          }
-        case None => Future.successful(None) // item not found
+      redis.watch(key) flatMap { _ =>
+        // lock key optimistically
+        redis.get[Counter](key) flatMap {
+          case Some(c@Counter(min, value, max)) =>
+            // found item, attempt update
+            Try {
+              Counter(min, f(value), max)
+            } match {
+              case Success(newCounter) =>
+                // map Future[Boolean] to Future[Option[Boolean]]
+                redis.withTransaction { t => t.set(key, newCounter) } map {
+                  Some(_)
+                }
+              case Failure(_) =>
+                // precondition for update not met
+                Future.successful(Some(false))
+            }
+          case None => Future.successful(None) // item not found
+        }
       }
     }
   }

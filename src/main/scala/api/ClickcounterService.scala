@@ -2,7 +2,6 @@ package edu.luc.etl.cs313.scala.clickcounter.service
 package api
 
 import akka.actor.Actor
-import edu.luc.etl.cs313.scala.clickcounter.service.common.NeedsExecutionContext
 import spray.http.MediaTypes._
 import spray.http._
 import spray.httpx.SprayJsonSupport
@@ -11,7 +10,7 @@ import spray.routing._
 import spray.routing.directives.OnCompleteFutureMagnet
 import scala.util.{Success, Try}
 import model.Counter
-import common.Repository
+import common._
 import repository.RedisRepositoryProvider
 
 /** Actor-based wrapper for our API service. */
