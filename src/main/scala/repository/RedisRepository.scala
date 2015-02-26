@@ -4,15 +4,13 @@ package repository
 import java.net.URI
 import scredis._
 import scredis.serialization.{Reader, Writer}
-import spray.http._
-import spray.httpx.SprayJsonSupport
 import spray.json._
 import scala.concurrent.Future
 import scala.util.{Failure, Properties, Success, Try}
 import model.Counter
 import common._
 
-trait RedisRepository extends Repository with NeedsExecutionContext with SprayJsonSupport {
+trait RedisRepository extends Repository with NeedsExecutionContext {
 
   lazy val repository = this
 
@@ -47,23 +45,27 @@ trait RedisRepository extends Repository with NeedsExecutionContext with SprayJs
 
   override def get(id: String) = redis.get[Counter](REDIS_KEY_SCHEMA + id)
 
-  // TODO express results without HTTP status codes
+  /**
+   * @return A future with the following content:
+   *         if item not found, `None`;
+   *         if update succeeded, `Some(true)`;
+   *         otherwise `Some(false)`.
+   */
   override def update(id: String, f: Int => Int) = {
     val key = REDIS_KEY_SCHEMA + id
-    redis.watch(key)
+    redis.watch(key) // lock key optimistically
     redis.get[Counter](key) flatMap {
-      case Some(c@Counter(min, value, max)) =>
+      case Some(c @ Counter(min, value, max)) =>
+        // found item, attempt update
         Try { Counter(min, f(value), max) } match {
           case Success(newCounter) =>
-            redis.withTransaction { t =>
-              t.set(key, newCounter)
-            } flatMap {
-              case true => Future { newCounter }
-              case false => Future { StatusCodes.InternalServerError }
-            }
-          case Failure(_) => Future { StatusCodes.Conflict }
+            // map Future[Boolean] to Future[Option[Boolean]]
+            redis.withTransaction { t => t.set(key, newCounter) } map { Some(_) }
+          case Failure(_) =>
+            // precondition for update not met
+            Future.successful(Some(false))
         }
-      case None => Future { StatusCodes.NotFound }
+      case None => Future.successful(None) // item not found
     }
   }
 }

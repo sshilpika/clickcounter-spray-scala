@@ -96,8 +96,8 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
       } ~ {
         def updateIt(f: Int => Int, errorMsg: String) =
           onCompleteWithRepoErrorHandler(repository.update(id, f)) {
-            case Success(r) => complete(r)
-
+            case Success(Some(true)) => complete(StatusCodes.NoContent)
+            case Success(Some(false)) => complete(StatusCodes.Conflict, errorMsg)
           }
         path("increment") {
           post {

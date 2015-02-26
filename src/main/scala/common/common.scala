@@ -1,7 +1,6 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 package common
 
-import spray.httpx.marshalling.ToResponseMarshallable
 import scala.concurrent.{ExecutionContext, Future}
 import model.Counter
 
@@ -11,7 +10,7 @@ trait Repository {
   def set(id: String, counter: Counter): Future[Boolean]
   def del(id: String): Future[Long]
   def get(id: String): Future[Option[Counter]]
-  def update(id: String, f: Int => Int): Future[ToResponseMarshallable]
+  def update(id: String, f: Int => Int): Future[Option[Boolean]]
 }
 
 /** Injected dependency on an execution context required to handle futures. */
