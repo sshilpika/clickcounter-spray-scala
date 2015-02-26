@@ -20,5 +20,7 @@ Once we flesh out the service implementation, we will add
 out-of-container tests of the service logic.
 
 This also serves as an exemplar of a spray service backed
-by Redis and deployable to Heroku. A sample instance is running
+by Redis and deployable to Heroku. It uses scredis, a nonblocking
+Redis client, and handles requests in a nonblocking way.
+A sample instance is running
 [here](http://laufer-clickcounter.herokuapp.com).
