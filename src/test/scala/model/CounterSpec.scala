@@ -13,6 +13,21 @@ class CounterSpec extends Specification with JsonMatchers {
       (min, value, max) must beEqualTo (0, 0, 5)
     }
 
+    "allow the creation of a valid counter" in {
+      val Counter(min, value, max) = Counter(0, 5, 5)
+      (min, value, max) must beEqualTo (0, 5, 5)
+    }
+
+    "allow the creation of a valid counter" in {
+      val Counter(min, value, max) = Counter(0, 1, 5)
+      (min, value, max) must beEqualTo (0, 1, 5)
+    }
+
+    "allow the creation of a valid counter" in {
+      val Counter(min, value, max) = Counter(0, 0, 1)
+      (min, value, max) must beEqualTo (0, 0, 1)
+    }
+
     "require min < max" in {
       Counter(0, 0, 0) must throwA[Throwable]
     }
@@ -20,9 +35,13 @@ class CounterSpec extends Specification with JsonMatchers {
     "require min <= value <= max" in {
       Counter(0, 6, 5) must throwA[Throwable]
     }
+
+    "require min <= value <= max" in {
+      Counter(1, 0, 5) must throwA[Throwable]
+    }
   }
 
-  "The spray JSON marshaling" should {
+  "The spray JSON marshaler" should {
 
     import spray.json._
     import DefaultJsonProtocol._
