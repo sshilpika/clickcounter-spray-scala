@@ -7,7 +7,7 @@
 
 # RESTful Click Counter Service
 
-This is a restful click counter service implemented in Scala
+This is a RESTful click counter service implemented in Scala
 using [spray](http://spray.io) and [Redis](http://redis.io)
 and [documented on Apiary](http://docs.clickcounter.apiary.io).
 
