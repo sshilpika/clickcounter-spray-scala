@@ -76,3 +76,10 @@ The service uses the Heroku [Rediscloud](https://addons.heroku.com/rediscloud) a
 
 A sample instance is running
 [here](http://laufer-clickcounter.herokuapp.com).
+
+# References
+
+[This short video](https://www.youtube.com/watch?v=b2F-DItXtZs)
+([transcript](http://www.mongodb-is-web-scale.com))
+includes a very brief discussion of the advantages of Redis,
+among other related topics.
