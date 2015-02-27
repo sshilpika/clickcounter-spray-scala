@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/LoyolaChicagoCode/clickcounter-spray-scala.svg)](https://travis-ci.org/LoyolaChicagoCode/clickcounter-spray-scala)
 [![Coverage Status](https://coveralls.io/repos/LoyolaChicagoCode/clickcounter-spray-scala/badge.svg?branch=master)](https://coveralls.io/r/LoyolaChicagoCode/clickcounter-spray-scala?branch=master)
-[![Codacy Badge](https://www.codacy.com/project/badge/8996f07e06ad46019b85c351db66df77)](https://www.codacy.com/public/laufer/clickcounter-spray-scala)
+[![Codacy Badge](https://www.codacy.com/project/badge/1ffc88abb7ea4e768e564abd3fe5b498)](https://www.codacy.com/public/laufer/clickcounter-spray-scala)
 
 [![Issue Stats](http://issuestats.com/github/LoyolaChicagoCode/clickcounter-spray-scala/badge/pr)](http://issuestats.com/github/LoyolaChicagoCode/clickcounter-spray-scala)
 [![Issue Stats](http://issuestats.com/github/LoyolaChicagoCode/clickcounter-spray-scala/badge/issue)](http://issuestats.com/github/LoyolaChicagoCode/clickcounter-spray-scala)
