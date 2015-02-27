@@ -48,7 +48,6 @@ trait RepositorySpec extends Specification {
   trait FixtureContext extends After {
     val repo = repository
     val key = UUID.randomUUID.toString
-    println(key)
     def after = {
       Thread.sleep(50) // give the current transaction some time to finish
       Await.result(repo.del(key), FiniteDuration(1, SECONDS))

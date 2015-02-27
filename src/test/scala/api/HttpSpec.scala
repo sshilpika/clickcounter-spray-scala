@@ -5,18 +5,22 @@ import dispatch._
 import org.specs2.matcher.JsonMatchers
 import org.specs2.mutable._
 
+/** Concrete test of Apiary mock server. */
 class ApiaryHttpSpec extends HttpSpec {
   val serviceRoot = host("private-14b8e-clickcounter.apiary-mock.com")
 }
 
+/** Concrete test of locally running service instance. */
 class LocalHttpSpec extends HttpSpec {
   val serviceRoot = host("localhost", 8080)
 }
 
+/** Concrete test of service instance running on Heroku. */
 class HerokuHttpSpec extends HttpSpec {
   val serviceRoot = host("laufer-clickcounter.herokuapp.com")
 }
 
+/** Testclass superclass for HTTP-based, in-container test of the deployed service. */
 trait HttpSpec extends Specification with JsonMatchers {
 
   sequential

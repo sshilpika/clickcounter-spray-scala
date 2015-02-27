@@ -4,7 +4,7 @@ package common
 import scala.concurrent.{ExecutionContext, Future}
 import model.Counter
 
-/** A repository for counters. */
+/** A repository for counter domain objects. */
 trait Repository {
   def keys: Future[Set[String]]
   def set(id: String, counter: Counter): Future[Boolean]

@@ -7,8 +7,10 @@ import spray.http.StatusCodes._
 import spray.testkit.Specs2RouteTest
 import repository.InMemoryRepositoryProvider
 
+/** Unit test of API routes using an in-memory repository as a mock. */
 class ConcreteApiSpec extends ApiSpec with InMemoryRepositoryProvider
 
+/** Testcase superclass for out-of-container testing of API routes. */
 trait ApiSpec extends Specification with Specs2RouteTest with JsonMatchers with ClickcounterService {
 
   sequential
