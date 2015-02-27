@@ -15,7 +15,6 @@ libraryDependencies ++= {
     "io.spray"            %%  "spray-routing" % sprayV,
     "io.spray"            %%  "spray-json"    % sprayJsonV,
     "io.spray"            %%  "spray-testkit" % sprayV      % Test,
-    "io.spray"            %%  "spray-testkit" % sprayV      % Test,
     "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
     "org.specs2"          %%  "specs2-core"   % "2.3.11"    % Test,
     "org.slf4j"           %   "slf4j-simple"  % "1.7.10",
