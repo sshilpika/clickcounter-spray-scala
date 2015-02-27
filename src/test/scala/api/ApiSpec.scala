@@ -3,66 +3,102 @@ package api
 
 import org.specs2.matcher.JsonMatchers
 import org.specs2.mutable._
-import model.Counter
+import spray.http.StatusCodes._
+import spray.testkit.Specs2RouteTest
+import repository.InMemoryRepositoryProvider
 
-trait ApiSpec extends Specification with JsonMatchers {
+class ConcreteApiSpec extends ApiSpec with InMemoryRepositoryProvider
 
-  "The Counter model" should {
+trait ApiSpec extends Specification with Specs2RouteTest with JsonMatchers with ClickcounterService {
 
-    "allow the creation of a valid counter" in {
-      val Counter(min, value, max) = Counter(0, 0, 5)
-      (min, value, max) must beEqualTo (0, 0, 5)
+  sequential
+
+  def actorRefFactory = system // connect the DSL to the test ActorSystem
+
+  lazy val ec = system.dispatcher
+
+  def beEqualToDouble(d: Double) = beEqualTo(d) ^^ ((_: String).toDouble)
+
+  val cMin = 0
+
+  val cMax = 5
+
+  val id = "123"
+
+  "The click counter service, on its collection of counters," should {
+
+    "allow the creation of a new counter" in {
+      Put("/counters/" + id + "?min=0&max=5") ~> myRoute ~> check {
+        status === Created
+      }
     }
 
-    "allow the creation of a valid counter" in {
-      val Counter(min, value, max) = Counter(0, 5, 5)
-      (min, value, max) must beEqualTo (0, 5, 5)
+    "include the newly created counter in the list of counters" in {
+      Get("/counters") ~> myRoute ~> check {
+        status === OK
+        responseAs[String] must contain("123")
+      }
     }
 
-    "allow the creation of a valid counter" in {
-      val Counter(min, value, max) = Counter(0, 1, 5)
-      (min, value, max) must beEqualTo (0, 1, 5)
+    "retrieve an existing counter" in {
+      Get("/counters/" + id) ~> myRoute ~> check {
+        status === OK
+        val counter = responseAs[String]
+        counter must / ("min" -> beEqualToDouble(cMin))
+        counter must / ("value" -> beEqualToDouble(cMin))
+        counter must / ("max" -> beEqualToDouble(cMax))
+      }
     }
 
-    "allow the creation of a valid counter" in {
-      val Counter(min, value, max) = Counter(0, 0, 1)
-      (min, value, max) must beEqualTo (0, 0, 1)
-    }
-
-    "require min < max" in {
-      Counter(0, 0, 0) must throwA[Throwable]
-    }
-
-    "require min <= value <= max" in {
-      Counter(0, 6, 5) must throwA[Throwable]
-    }
-
-    "require min <= value <= max" in {
-      Counter(1, 0, 5) must throwA[Throwable]
+    "delete an existing counter" in {
+      Delete("/counters/" + id) ~> myRoute ~> check {
+        status === NoContent
+      }
     }
   }
 
-  "The spray JSON marshaler" should {
+  "The click counter service, on a specific counter," should {
 
-    import spray.json.DefaultJsonProtocol._
-    import spray.json._
-
-    implicit val sprayCounterFormat = jsonFormat3(Counter.apply)
-
-    def beEqualToDouble(d: Double) = beEqualTo(d) ^^ ((_: String).toDouble)
-
-    "write a counter to JSON" in {
-      val c = Counter(1, 2, 3)
-      val j = c.toJson.toString
-      j must / ("min" -> beEqualToDouble(1))
-      j must / ("value" -> beEqualToDouble(2))
-      j must / ("max" -> beEqualToDouble(3))
+    "allow the creation of a new counter" in {
+      Put("/counters/" + id + "?min=0&max=5") ~> myRoute ~> check {
+        status === Created
+      }
     }
 
-    "read a counter from JSON" in {
-      val j = """{ "min": 1, "value": 2, "max": 3 }"""
-      val c = Counter(1, 2, 3)
-      j.parseJson.convertTo[Counter] must beEqualTo(c)
+    "refuse to decrement the counter initially" in {
+      Post("/counters/" + id + "/decrement") ~> myRoute ~> check {
+        status === Conflict
+      }
+    }
+
+    "increment the counter" in {
+      Post("/counters/" + id + "/increment") ~> myRoute ~> check {
+        status === NoContent
+      }
+      Get("/counters/" + id) ~> myRoute ~> check {
+        status === OK
+        val counter = responseAs[String]
+        counter must / ("min" -> beEqualToDouble(cMin))
+        counter must / ("value" -> beEqualToDouble(cMin + 1))
+        counter must / ("max" -> beEqualToDouble(cMax))
+      }
+    }
+
+    "reset the counter" in {
+      Post("/counters/" + id + "/reset") ~> myRoute ~> check {
+        status === NoContent
+      }
+      Get("/counters/" + id) ~> myRoute ~> check {
+        status === OK
+        val counter = responseAs[String]
+        counter must / ("min" -> beEqualToDouble(cMin))
+        counter must / ("value" -> beEqualToDouble(cMin))
+        counter must / ("max" -> beEqualToDouble(cMax))
+      }
+    }
+
+    "retrieve a counter value stream" in {
+      todo
     }
   }
 }

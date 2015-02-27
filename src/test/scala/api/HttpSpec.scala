@@ -14,7 +14,7 @@ class LocalHttpSpec extends HttpSpec {
 }
 
 class HerokuHttpSpec extends HttpSpec {
-  val serviceRoot = host("http://laufer-clickcounter.herokuapp.com")
+  val serviceRoot = host("laufer-clickcounter.herokuapp.com")
 }
 
 trait HttpSpec extends Specification with JsonMatchers {
@@ -29,10 +29,12 @@ trait HttpSpec extends Specification with JsonMatchers {
 
   val cMax = 5
 
+  val id = "123"
+
   "The click counter service, on its collection of counters," should {
 
     "allow the creation of a new counter" in {
-      val request = serviceRoot / "counters" / "123" <<? Map("min" -> cMin.toString, "max" -> cMax.toString)
+      val request = serviceRoot / "counters" / id <<? Map("min" -> cMin.toString, "max" -> cMax.toString)
       val response = Http(request.PUT)
       response().getStatusCode === 201
     }
@@ -40,11 +42,11 @@ trait HttpSpec extends Specification with JsonMatchers {
     "include the newly created counter in the list of counters" in {
       val request = serviceRoot / "counters"
       val response = Http(request OK as.String)
-      response() contains "123"
+      response() contains id
     }
 
     "retrieve an existing counter" in {
-      val request = serviceRoot / "counters" / "123"
+      val request = serviceRoot / "counters" / id
       val response = Http(request OK as.String)
       val counter = response()
       counter must / ("min" -> beEqualToDouble(cMin))
@@ -53,7 +55,7 @@ trait HttpSpec extends Specification with JsonMatchers {
     }
 
     "delete an existing counter" in {
-      val request = serviceRoot / "counters" / "123"
+      val request = serviceRoot / "counters" / id
       val response = Http(request.DELETE)
       response().getStatusCode === 204
     }
@@ -62,23 +64,23 @@ trait HttpSpec extends Specification with JsonMatchers {
   "The click counter service, on a specific counter," should {
 
     "allow the creation of a new counter" in {
-      val request = serviceRoot / "counters" / "123" <<? Map("min" -> cMin.toString, "max" -> cMax.toString)
+      val request = serviceRoot / "counters" / id <<? Map("min" -> cMin.toString, "max" -> cMax.toString)
       val response = Http(request.PUT)
       response().getStatusCode === 201
     }
 
     "refuse to decrement the counter initially" in {
-      val request = serviceRoot / "counters" / "123" / "decrement"
+      val request = serviceRoot / "counters" / id / "decrement"
       val response = Http(request.POST)
       response().getStatusCode === 409
     }
 
     "increment the counter" in {
-      val request = serviceRoot / "counters" / "123" / "increment"
+      val request = serviceRoot / "counters" / id / "increment"
       val response = Http(request.POST)
       val result = response()
       result.getStatusCode === 204
-      val request2 = serviceRoot / "counters" / "123"
+      val request2 = serviceRoot / "counters" / id
       val response2 = Http(request2 OK as.String)
       val counter = response2()
       counter must / ("min" -> beEqualToDouble(cMin))
@@ -87,11 +89,11 @@ trait HttpSpec extends Specification with JsonMatchers {
     }
 
     "reset the counter" in {
-      val request = serviceRoot / "counters" / "123" / "reset"
+      val request = serviceRoot / "counters" / id / "reset"
       val response = Http(request.POST)
       val result = response()
       result.getStatusCode === 204
-      val request2 = serviceRoot / "counters" / "123"
+      val request2 = serviceRoot / "counters" / id
       val response2 = Http(request2 OK as.String)
       val counter = response2()
       counter must / ("min" -> beEqualToDouble(cMin))
