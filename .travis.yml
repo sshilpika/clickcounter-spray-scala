@@ -1,6 +1,6 @@
 language: scala
 scala: 2.11.4
-script: sbt coverage test
+script: sbt coverage "testOnly edu.luc.etl.cs313.scala.clickcounter.service.api.ConcreteApiSpec edu.luc.etl.cs313.scala.clickcounter.service.api.HerokuHttpSpec edu.luc.etl.cs313.scala.clickcounter.service.api.ApiaryHttpSpec edu.luc.etl.cs313.scala.clickcounter.service.model.CounterSpec edu.luc.etl.cs313.scala.clickcounter.service.repository.InMemoryRepositorySpec"
 after_success: sbt coveralls
 deploy:
   provider: heroku

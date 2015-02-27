@@ -23,9 +23,10 @@ An understanding of
 - Stateless API layer
 - Stateful resources
 - Persistent storage
-- Hosted cloud-based deployment
 - Server-side concurrency and scalability, in particular, asynchronous,
   nonblocking end-to-end request processing using Akka futures
+- Hosted cloud-based continuous integration and deployment
+  (see status badges at the top)
 
 # Documentation
 

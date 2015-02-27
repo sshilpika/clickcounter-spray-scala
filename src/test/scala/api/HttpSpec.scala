@@ -11,12 +11,12 @@ class ApiaryHttpSpec extends HttpSpec {
 }
 
 /** Concrete test of locally running service instance. */
-class LocalHttpSpec extends HttpSpec {
+class LocalHttpSpec extends HttpSpecWithIncrement {
   val serviceRoot = host("localhost", 8080)
 }
 
 /** Concrete test of service instance running on Heroku. */
-class HerokuHttpSpec extends HttpSpec {
+class HerokuHttpSpec extends HttpSpecWithIncrement {
   val serviceRoot = host("laufer-clickcounter.herokuapp.com")
 }
 
@@ -79,19 +79,6 @@ trait HttpSpec extends Specification with JsonMatchers {
       response().getStatusCode === 409
     }
 
-    "increment the counter" in {
-      val request = serviceRoot / "counters" / id / "increment"
-      val response = Http(request.POST)
-      val result = response()
-      result.getStatusCode === 204
-      val request2 = serviceRoot / "counters" / id
-      val response2 = Http(request2 OK as.String)
-      val counter = response2()
-      counter must / ("min" -> beEqualToDouble(cMin))
-      counter must / ("value" -> beEqualToDouble(cMin + 1))
-      counter must / ("max" -> beEqualToDouble(cMax))
-    }
-
     "reset the counter" in {
       val request = serviceRoot / "counters" / id / "reset"
       val response = Http(request.POST)
@@ -107,6 +94,25 @@ trait HttpSpec extends Specification with JsonMatchers {
 
     "retrieve a counter value stream" in {
       todo
+    }
+  }
+}
+
+trait HttpSpecWithIncrement extends HttpSpec {
+
+  "The click counter service, on a specific counter," should {
+
+    "increment the counter" in {
+      val request = serviceRoot / "counters" / id / "increment"
+      val response = Http(request.POST)
+      val result = response()
+      result.getStatusCode === 204
+      val request2 = serviceRoot / "counters" / id
+      val response2 = Http(request2 OK as.String)
+      val counter = response2()
+      counter must /("min" -> beEqualToDouble(cMin))
+      counter must /("value" -> beEqualToDouble(cMin + 1))
+      counter must /("max" -> beEqualToDouble(cMax))
     }
   }
 }
