@@ -1,0 +1,12 @@
+language: scala
+scala: 2.11.4
+script: sbt coverage test
+after_success: sbt coveralls
+deploy:
+  provider: heroku
+  app: laufer-clickcounter
+  strategy: git
+  on:
+    repo: LoyolaChicagoCode/clickcounter-spray-scala
+  api_key:
+    secure: Q3LKUdijesEHo6/NtPiMtuqWMe51p+1xva7Y1zLZVqlIrHoFXTIe5RMnv6vErwAzH3E+tVBRuhYIwOnjaU4wBgejm2Fp408VdBTR1azAiu2vXTthRavn4qsmlcnKP/SWyEuELe4hPKal4WGtqZ+ocAAxmk23yXFXDFU5f1E6y1s=
