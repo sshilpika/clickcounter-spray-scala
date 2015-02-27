@@ -43,7 +43,9 @@ trait RedisRepositoryProvider {
 
     import redis.dispatcher
 
-    override def keys = redis.keys(REDIS_KEY_SCHEMA + "*")
+    override def keys =
+      for { result <- redis.keys(REDIS_KEY_SCHEMA + "*") } yield
+        for { s <- result } yield s.split(':')(1)
 
     override def set(id: String, counter: Counter) = redis.set(REDIS_KEY_SCHEMA + id, counter)
 
@@ -57,7 +59,7 @@ trait RedisRepositoryProvider {
      *         if update succeeded, `Some(true)`;
      *         otherwise `Some(false)`.
      */
-    override def update(id: String, f: Int => Int) = {
+    override def update(id: String, f: Counter => Int) = {
       val key = REDIS_KEY_SCHEMA + id
       redis.watch(key) flatMap { _ =>
         // lock key optimistically
@@ -65,7 +67,7 @@ trait RedisRepositoryProvider {
           case Some(c@Counter(min, value, max)) =>
             // found item, attempt update
             Try {
-              Counter(min, f(value), max)
+              Counter(min, f(c), max)
             } match {
               case Success(newCounter) =>
                 // map Future[Boolean] to Future[Option[Boolean]]

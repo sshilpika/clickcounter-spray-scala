@@ -25,11 +25,11 @@ class InMemoryRepository extends Repository {
 
   override def del(id: String) = synchronized { data.remove(id) ; Future.successful(1) }
 
-  override def update(id: String, f: (Int) => Int) = synchronized {
+  override def update(id: String, f: Counter => Int) = synchronized {
     data.get(id) match {
       case Some(c @ Counter(min, value, max)) =>
         // found item, attempt update
-        Try { Counter(min, f(value), max) } match {
+        Try { Counter(min, f(c), max) } match {
           case Success(newCounter) =>
             data.put(id, newCounter)
             Future.successful(Some(true))

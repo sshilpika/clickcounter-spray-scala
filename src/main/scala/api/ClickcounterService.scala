@@ -74,7 +74,7 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
               onCompleteWithRepoErrorHandler(repository.set(id, counter)) {
                 case Success(true) =>
                   val loc = uri.copy(query = Uri.Query.Empty)
-                  complete(StatusCodes.Created, HttpHeaders.Location(loc) :: Nil, counter)
+                  complete(StatusCodes.Created, HttpHeaders.Location(loc) :: Nil, "")
               }
             parameters('min.as[Int], 'max.as[Int]) { (min, max) =>
               createIt(Counter(min, min, max))
@@ -95,19 +95,24 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
           }
         }
       } ~ {
-        def updateIt(f: Int => Int, errorMsg: String) =
+        def updateIt(f: Counter => Int, errorMsg: String) =
           onCompleteWithRepoErrorHandler(repository.update(id, f)) {
             case Success(Some(true)) => complete(StatusCodes.NoContent)
             case Success(Some(false)) => complete(StatusCodes.Conflict, errorMsg)
           }
         path("increment") {
           post {
-            updateIt(_ + 1, "counter at max, cannot increment")
+            updateIt(_.value + 1, "counter at max, cannot increment")
           }
         } ~
         path("decrement") {
           post {
-            updateIt(_ - 1, "counter at min, cannot decrement")
+            updateIt(_.value - 1, "counter at min, cannot decrement")
+          }
+        } ~
+        path("reset") {
+          post {
+            updateIt(_.min, "counter at min, cannot decrement")
           }
         } ~
         path("stream") {

@@ -31,17 +31,17 @@ trait RepositorySpec extends Specification {
 
     "not update an nonexisting item" in new FixtureContext {
       val c = Counter(1, 2, 3)
-      repo.update(key, _ + 1) must beNone.await
+      repo.update(key, _.value + 1) must beNone.await
     }
 
     "update an existing item" in new FixtureContext {
       val c = Counter(1, 2, 3)
-      repo.set(key, c) flatMap { _ => repo.update(key, _ + 1) } must beSome(true).await
+      repo.set(key, c) flatMap { _ => repo.update(key, _.value + 1) } must beSome(true).await
     }
 
     "not update an existing item when preconditions are violated" in new FixtureContext {
       val c = Counter(1, 3, 3)
-      repo.set(key, c) flatMap { _ => repo.update(key, _ + 1) } must beSome(false).await
+      repo.set(key, c) flatMap { _ => repo.update(key, _.value + 1) } must beSome(false).await
     }
   }
 

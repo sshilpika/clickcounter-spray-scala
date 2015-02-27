@@ -10,7 +10,7 @@ trait Repository {
   def set(id: String, counter: Counter): Future[Boolean]
   def del(id: String): Future[Long]
   def get(id: String): Future[Option[Counter]]
-  def update(id: String, f: Int => Int): Future[Option[Boolean]]
+  def update(id: String, f: Counter => Int): Future[Option[Boolean]]
 }
 
 /** Injected dependency on an execution context required to handle futures. */
