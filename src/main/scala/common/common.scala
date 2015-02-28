@@ -1,7 +1,8 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 package common
 
-import scala.concurrent.{ExecutionContext, Future}
+import akka.actor.ActorSystem
+import scala.concurrent.Future
 import model.Counter
 
 /** A repository for counter domain objects. */
@@ -11,9 +12,10 @@ trait Repository {
   def del(id: String): Future[Long]
   def get(id: String): Future[Option[Counter]]
   def update(id: String, f: Counter => Int): Future[Option[Boolean]]
+  def subscribe(id: String)(handler: Option[Counter] => Unit): Future[Int]
 }
 
-/** Injected dependency on an execution context required to handle futures. */
-trait NeedsExecutionContext {
-  implicit def ec: ExecutionContext
+/** Injected dependency on an actor system required by scredis PubSub. */
+trait NeedsActorSystem {
+  implicit def actorSystem: ActorSystem
 }

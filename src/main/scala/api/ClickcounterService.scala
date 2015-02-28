@@ -1,12 +1,9 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 package api
 
-import scala.concurrent.duration._
 import akka.actor._
-import spray.can.Http
 import spray.http.MediaTypes._
 import spray.http._
-import spray.util._
 import spray.httpx.SprayJsonSupport
 import spray.json._
 import spray.routing._
@@ -28,15 +25,17 @@ class ClickcounterServiceActor extends Actor with ClickcounterService with Redis
   // or timeout handling
   def receive = runRoute(myRoute)
 
-  /** Execution context required by the nonblocking Redis client. */
-  lazy val ec = context.dispatcher
+  def actorSystem = context.system
 }
 
 /**
  * Defines our service behavior independently from the service actor.
  * Defines the `sprayCounterFormat` possibly required by the repository provider.
  */
-trait ClickcounterService extends HttpService with SprayJsonSupport with DefaultJsonProtocol with NeedsExecutionContext {
+trait ClickcounterService extends HttpService with SprayJsonSupport with DefaultJsonProtocol {
+
+  /** Execution context required by spray-routing. */
+  implicit def executionContext = actorRefFactory.dispatcher
 
   /** Injected dependency on Counter repository. */
   def repository: Repository
@@ -44,11 +43,13 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
   /** Serialization from Counter to JSON string for spray HTTP responses. */
   implicit val sprayCounterFormat = jsonFormat3(Counter.apply)
 
+  def repoErrorHandler[T]: PartialFunction[Try[T], Route] = {
+    case Success(_) => complete(StatusCodes.NotFound)
+    case _ => complete(StatusCodes.InternalServerError)
+  }
+
   def onCompleteWithRepoErrorHandler[T](m: OnCompleteFutureMagnet[T])(body: PartialFunction[Try[T], Route]) =
-    onComplete(m)(body orElse {
-      case Success(_) => complete(StatusCodes.NotFound)
-      case _ => complete(StatusCodes.InternalServerError)
-    })
+    onComplete(m)(body orElse repoErrorHandler)
 
   val myRoute =
     pathEndOrSingleSlash {
@@ -120,50 +121,26 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
         } ~
         path("stream") {
           get {
-            sendStreamingResponse
+            sendStreamingResponse(id)
           }
         }
       }
     }
 
-  // remainder from on-spray-can example
-  // TODO convert to Redis subscriber
+  def sendStreamingResponse(id: String)(ctx: RequestContext): Unit = {
+    repository.get(id) onComplete (({
+      case Success(Some(c @ Counter(min, value, max))) =>
 
-  // simple case class whose instances we use as send confirmation message for streaming chunks
-  case class Ok(remaining: Int)
+        val responseStart = HttpResponse(entity = HttpEntity(`application/json`, c.toJson.toString))
+        ctx.responder ! ChunkedResponseStart(responseStart)
 
-  // we prepend 2048 "empty" bytes to push the browser to immediately start displaying the incoming chunks
-  lazy val streamStart = " " * 2048 + "<html><body><h2>A streaming response</h2><p>(for 15 seconds)<ul>"
-
-  lazy val streamEnd = "</ul><p>Finished.</p></body></html>"
-
-  def sendStreamingResponse(ctx: RequestContext): Unit =
-    actorRefFactory.actorOf {
-      Props {
-        new Actor with ActorLogging {
-          // we use the successful sending of a chunk as trigger for scheduling the next chunk
-          val responseStart = HttpResponse(entity = HttpEntity(`text/html`, streamStart))
-          ctx.responder ! ChunkedResponseStart(responseStart).withAck(Ok(16))
-
-          def receive = {
-            case Ok(0) =>
-              ctx.responder ! MessageChunk(streamEnd)
-              ctx.responder ! ChunkedMessageEnd
-              context.stop(self)
-
-            case Ok(remaining) =>
-              in(500.millis) {
-                val nextChunk = MessageChunk("<li>" + DateTime.now.toIsoDateTimeString + "</li>")
-                ctx.responder ! nextChunk.withAck(Ok(remaining - 1))
-              }
-
-            case ev: Http.ConnectionClosed =>
-              log.warning("Stopping response streaming due to {}", ev)
-          }
+        repository.subscribe(id) {
+          case Some(counter) =>
+            ctx.responder ! MessageChunk(counter.toJson.toString)
+          case None =>
+            () // FIXME log error
         }
-      }
-    }
 
-  def in[U](duration: FiniteDuration)(body: => U): Unit =
-    actorSystem.scheduler.scheduleOnce(duration)(body)
+    }: PartialFunction[Try[Option[Counter]], Unit]) orElse repoErrorHandler)
+  }
 }

@@ -40,4 +40,6 @@ class InMemoryRepository extends Repository {
       case None => Future.successful(None) // item not found
     }
   }
+
+  override def subscribe(id: String)(handler: Option[Counter] => Unit) = ???
 }
