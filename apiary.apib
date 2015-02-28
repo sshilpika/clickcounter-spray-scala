@@ -49,6 +49,7 @@ A single Counter object with all its details
             Content-Length: 0
 
 ### Delete a counter [DELETE]
+
 + Response 204
     + Header
 
@@ -61,6 +62,7 @@ The resource for incrementing this counter
     + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
 
 ### Increment a counter [POST]
+
 + Response 204 (application/json)
     + Header
     
@@ -89,6 +91,7 @@ The resource for resetting this counter
     + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
 
 ### Reset a counter [POST]
+
 + Response 204 (application/json)
     + Header
     
@@ -101,6 +104,7 @@ The event stream of this counter's values
     + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
 
 ### Retrieve a counter value stream - TODO: convert to JSON [GET]
+
 + Response 200 (text/event-stream)
     + Header
             
@@ -108,7 +112,6 @@ The event stream of this counter's values
 
     + Body
 
-            0
-            1
-            2
-            3
+            {"min":0,"value":0,"max":5}
+            {"min":0,"value":1,"max":5}
+            {"min":0,"value":2,"max":5}
