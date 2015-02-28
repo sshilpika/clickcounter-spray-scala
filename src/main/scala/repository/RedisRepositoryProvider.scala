@@ -47,7 +47,14 @@ trait RedisRepositoryProvider {
       for { result <- redis.keys(REDIS_KEY_SCHEMA + "*") } yield
         for { s <- result } yield s.split(':')(1)
 
-    override def set(id: String, counter: Counter) = redis.set(REDIS_KEY_SCHEMA + id, counter)
+    override def set(id: String, counter: Counter) = {
+      val key = REDIS_KEY_SCHEMA + id
+      val value = counter.toJson.toString
+      redis.set(key, value) map { result =>
+        redis.publish(key, counter)
+        result
+      }
+    }
 
     override def del(id: String) = redis.del(REDIS_KEY_SCHEMA + id)
 
@@ -71,8 +78,9 @@ trait RedisRepositoryProvider {
             } match {
               case Success(newCounter) =>
                 // map Future[Boolean] to Future[Option[Boolean]]
-                redis.withTransaction { t => t.set(key, newCounter) } map {
-                  Some(_)
+                redis.withTransaction { t => t.set(key, newCounter) } map { result =>
+                  redis.publish(key, newCounter)
+                  Some(result)
                 }
               case Failure(_) =>
                 // precondition for update not met
