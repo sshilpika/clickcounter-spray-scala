@@ -24,8 +24,6 @@ class ClickcounterServiceActor extends Actor with ClickcounterService with Redis
   // other things here, like request stream processing
   // or timeout handling
   def receive = runRoute(myRoute)
-
-  def actorSystem = context.system
 }
 
 /**

@@ -10,7 +10,5 @@ class RedisRepositorySpec extends RepositorySpec with RedisRepositoryProvider {
   import spray.json._
   import DefaultJsonProtocol._
 
-  val actorSystem = ActorSystem("testing")
-
   implicit val sprayCounterFormat = jsonFormat3(Counter.apply)
 }

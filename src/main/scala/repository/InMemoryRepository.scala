@@ -29,7 +29,7 @@ class InMemoryRepository extends Repository {
     data.get(id) match {
       case Some(c @ Counter(min, value, max)) =>
         // found item, attempt update
-        Try { Counter(min, f(c), max) } match {
+        Try(Counter(min, f(c), max)) match {
           case Success(newCounter) =>
             data.put(id, newCounter)
             Future.successful(Some(true))

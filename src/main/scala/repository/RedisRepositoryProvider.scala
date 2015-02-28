@@ -2,6 +2,7 @@ package edu.luc.etl.cs313.scala.clickcounter.service
 package repository
 
 import java.net.URI
+import akka.actor.ActorSystem
 import scredis._
 import scredis.serialization.{Reader, Writer}
 import spray.json._
@@ -14,7 +15,7 @@ import common._
  * Stackable mixin trait that provides a Redis repository.
  * It requires a `sprayCounterFormat` for serialization.
  */
-trait RedisRepositoryProvider extends NeedsActorSystem {
+trait RedisRepositoryProvider {
 
   /** Serialization between Counter and JSON string provided by spray service. */
   implicit def sprayCounterFormat: RootJsonFormat[Counter]
@@ -44,6 +45,8 @@ trait RedisRepositoryProvider extends NeedsActorSystem {
   object repository extends Repository {
 
     import redis.dispatcher
+
+    implicit val actorSystem = ActorSystem("redis-pubsub")
 
     override def keys =
       for { result <- redis.keys(toKey("*")) } yield

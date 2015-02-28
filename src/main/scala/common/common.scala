@@ -1,7 +1,6 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 package common
 
-import akka.actor.ActorSystem
 import scala.concurrent.Future
 import model.Counter
 
@@ -13,9 +12,4 @@ trait Repository {
   def get(id: String): Future[Option[Counter]]
   def update(id: String, f: Counter => Int): Future[Option[Boolean]]
   def subscribe(id: String)(handler: Option[Counter] => Unit): Future[Int]
-}
-
-/** Injected dependency on an actor system required by scredis PubSub. */
-trait NeedsActorSystem {
-  implicit def actorSystem: ActorSystem
 }
