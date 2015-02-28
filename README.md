@@ -43,7 +43,8 @@ The service is written in Scala and leverages these libraries:
 - [spray-routing](http://spray.io/documentation/1.2.2/spray-routing),
   a high-level DSL for writing defining RESTful APIs.
 - [scredis](https://github.com/Livestream/scredis),
-  a high-quality, non-blocking [Redis](http://redis.io) client.
+  a high-quality, well-documented, non-blocking [Redis](http://redis.io) client
+  with support for publish-subscribe.
 
 # Testing
 
