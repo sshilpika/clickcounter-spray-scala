@@ -14,8 +14,9 @@ class RedisSpec extends Specification {
       println("auth = " + url.getAuthority)
       println("userInfo = " + url.getUserInfo)
       val client = new Redis(url.getHost, url.getPort)
-      if (url.getUserInfo != null) {
-        client.auth(url.getUserInfo.split(":", 2)(1))
+      for (userInfo <- Option(url.getUserInfo)) {
+        val secret = userInfo.split(':')(1)
+        client.auth(secret)
       }
       val key = "hello"
       val value = "world"

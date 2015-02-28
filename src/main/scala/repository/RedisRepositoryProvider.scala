@@ -32,8 +32,8 @@ trait RedisRepositoryProvider {
   val url = new URI(Properties.envOrElse("REDISCLOUD_URL", "redis://localhost:6379"))
 
   val redis = Redis(url.getHost, url.getPort)
-  if (url.getUserInfo != null) {
-    val secret = url.getUserInfo.split(':')(1)
+  for (userInfo <- Option(url.getUserInfo)) {
+    val secret = userInfo.split(':')(1)
     redis.auth(secret)
   }
 
