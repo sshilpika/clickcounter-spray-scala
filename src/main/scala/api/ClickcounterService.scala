@@ -1,9 +1,12 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 package api
 
-import akka.actor.Actor
+import scala.concurrent.duration._
+import akka.actor._
+import spray.can.Http
 import spray.http.MediaTypes._
 import spray.http._
+import spray.util._
 import spray.httpx.SprayJsonSupport
 import spray.json._
 import spray.routing._
@@ -79,8 +82,8 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
             parameters('min.as[Int], 'max.as[Int]) { (min, max) =>
               createIt(Counter(min, min, max))
             } ~
-            entity(as[Counter]) { c =>
-              createIt(c)
+            entity(as[Counter]) {
+              createIt
             }
           }
         } ~
@@ -117,9 +120,50 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
         } ~
         path("stream") {
           get {
-            complete(StatusCodes.NotImplemented)
+            sendStreamingResponse
           }
         }
       }
     }
+
+  // remainder from on-spray-can example
+  // TODO convert to Redis subscriber
+
+  // simple case class whose instances we use as send confirmation message for streaming chunks
+  case class Ok(remaining: Int)
+
+  // we prepend 2048 "empty" bytes to push the browser to immediately start displaying the incoming chunks
+  lazy val streamStart = " " * 2048 + "<html><body><h2>A streaming response</h2><p>(for 15 seconds)<ul>"
+
+  lazy val streamEnd = "</ul><p>Finished.</p></body></html>"
+
+  def sendStreamingResponse(ctx: RequestContext): Unit =
+    actorRefFactory.actorOf {
+      Props {
+        new Actor with ActorLogging {
+          // we use the successful sending of a chunk as trigger for scheduling the next chunk
+          val responseStart = HttpResponse(entity = HttpEntity(`text/html`, streamStart))
+          ctx.responder ! ChunkedResponseStart(responseStart).withAck(Ok(16))
+
+          def receive = {
+            case Ok(0) =>
+              ctx.responder ! MessageChunk(streamEnd)
+              ctx.responder ! ChunkedMessageEnd
+              context.stop(self)
+
+            case Ok(remaining) =>
+              in(500.millis) {
+                val nextChunk = MessageChunk("<li>" + DateTime.now.toIsoDateTimeString + "</li>")
+                ctx.responder ! nextChunk.withAck(Ok(remaining - 1))
+              }
+
+            case ev: Http.ConnectionClosed =>
+              log.warning("Stopping response streaming due to {}", ev)
+          }
+        }
+      }
+    }
+
+  def in[U](duration: FiniteDuration)(body: => U): Unit =
+    actorSystem.scheduler.scheduleOnce(duration)(body)
 }
