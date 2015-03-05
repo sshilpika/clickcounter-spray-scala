@@ -126,17 +126,25 @@ trait ClickcounterService extends HttpService with SprayJsonSupport with Default
     }
 
   def sendStreamingResponse(id: String)(ctx: RequestContext): Unit = {
+    def toEvent(c: Counter): String =
+      StringBuilder
+        .newBuilder
+        .append("data: ")
+        .append(c.toJson.toString)
+        .append(System.lineSeparator)
+        .append(System.lineSeparator)
+        .toString
+
     repository.get(id) onComplete (({
       case Success(Some(c @ Counter(min, value, max))) =>
-
-        val responseStart = HttpResponse(entity = HttpEntity(`application/json`, c.toJson.toString))
+        val responseStart = HttpResponse(entity = HttpEntity(ContentType(MediaType.custom("text/event-stream")), toEvent(c)))
         ctx.responder ! ChunkedResponseStart(responseStart)
 
         repository.subscribe(id) {
           case Some(counter) =>
-            ctx.responder ! MessageChunk(counter.toJson.toString)
+            ctx.responder ! MessageChunk(toEvent(counter))
           case None =>
-            () // FIXME log error
+            () // FIXME properly log error
         }
 
     }: PartialFunction[Try[Option[Counter]], Unit]) orElse repoErrorHandler)
