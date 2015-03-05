@@ -1,7 +1,6 @@
 package edu.luc.etl.cs313.scala.clickcounter.service
 package repository
 
-import akka.actor.ActorSystem
 import model.Counter
 
 /** Requires a running Redis server running locally or at a URL defined as `REDISCLOUD_URL`. */
