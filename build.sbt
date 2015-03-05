@@ -30,3 +30,5 @@ Revolver.settings
 enablePlugins(JavaAppPackaging)
 
 ScoverageSbtPlugin.ScoverageKeys.coverageExcludedPackages := """.*\.Boot;.*\.ClickcounterServiceActor"""
+
+test in assembly := {}
