@@ -11,9 +11,14 @@ This is a RESTful click counter service implemented in Scala
 using [spray](http://spray.io) and [Redis](http://redis.io)
 and [documented on Apiary](http://docs.clickcounter.apiary.io).
 
-It is intended as an end-to-end example for teaching and
-exemplar for research explorations, based on a very simple
-domain model but demonstrating the full depth of the solution stack.
+It is intended as an end-to-end example for teaching and exemplar for
+research explorations in the area of collaborative distributed/mobile
+applications. As such, it is based on a very simple domain model but
+demonstrating the full depth of the solution stack.
+
+An
+[Android client app](https://github.com/LoyolaChicagoCode/clickcounter-android-rxscala-http)
+for this service is now available.
 
 # Learning Objectives
 
@@ -84,7 +89,9 @@ which [directly supports Scala with sbt](https://devcenter.heroku.com/articles/s
 The service uses the Heroku [Rediscloud](https://addons.heroku.com/rediscloud) addon.
 
 A sample instance is running
-[here](http://laufer-clickcounter.herokuapp.com).
+[here](http://laufer-clickcounter.herokuapp.com). It tends to go above
+the Redis Labs connection limit, however, and will stop working
+temporarily. You are encouraged to host your own service instance.
 
 # References
 
