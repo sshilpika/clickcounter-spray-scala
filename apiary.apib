@@ -8,12 +8,16 @@ The click counter service provides a *hosted counter* that can be queried and mo
 ## Counters [/counters]
 The collection of counters
 
-### Create a counter [POST]
-+ Response 201
+### Retrieve the collection of counters [GET]
+
++ Response 200 (application/json)
     + Header
     
-            Location: /counters/123
-            Content-Length: 0
+            Content-Length: 14
+
+    + Body
+
+            ["123", "111"]
 
 ## Counter [/counters/{id}]
 A single Counter object with all its details
@@ -22,16 +26,30 @@ A single Counter object with all its details
     + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
 
 ### Retrieve a counter [GET]
+
 + Response 200 (application/json)
     + Header
     
-            Content-Length: 48
+            Content-Length: 34
 
     + Body
 
-            { "id": "123", "value": 3, "state": "counting" }
+            { "min": 0, "value": 0, "max": 5 }
+
+### Create a counter [PUT]
+
++ Parameters
+    + min (required, number, `0`) ... The minimum value of the bounded counter.
+    + max (required, number, `5`) ... The maximum value of the bounded counter.
+
++ Response 201
+    + Header
+    
+            Location: http://myhost/counters/123
+            Content-Length: 0
 
 ### Delete a counter [DELETE]
+
 + Response 204
     + Header
 
@@ -44,14 +62,11 @@ The resource for incrementing this counter
     + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
 
 ### Increment a counter [POST]
-+ Response 200 (application/json)
+
++ Response 204 (application/json)
     + Header
     
-            Content-Length: 44
-
-    + Body
-
-            { "id": "123", "value": 5, "state": "full" }
+            Content-Length: 0
 
 ## Counter decrement [/counters/{id}/decrement]
 The resource for decrementing this counter
@@ -60,14 +75,14 @@ The resource for decrementing this counter
     + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
 
 ### Decrement a counter [POST]
-+ Response 409 (application/json)
++ Response 409 (text/plain)
     + Header
     
-            Content-Length: 45
+            Content-Length: 32
 
     + Body
 
-            { "id": "123", "value": 0, "state": "empty" }
+            counter at min, cannot decrement
 
 ## Counter reset [/counters/{id}/reset]
 The resource for resetting this counter
@@ -76,30 +91,11 @@ The resource for resetting this counter
     + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
 
 ### Reset a counter [POST]
-+ Response 200 (application/json)
+
++ Response 204 (application/json)
     + Header
     
-            Content-Length: 45
-
-    + Body
-
-            { "id": "123", "value": 0, "state": "empty" }
-
-## Counter value [/counters/{id}/value]
-The current value of this counter
-
-+ Parameters
-    + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
-
-### Retrieve a counter value [GET]
-+ Response 200 (text/plain)
-    + Header
-
-            Content-Length: 1
-
-    + Body
-    
-            3
+            Content-Length: 0
 
 ## Counter value stream [/counters/{id}/stream]
 The event stream of this counter's values 
@@ -107,7 +103,8 @@ The event stream of this counter's values
 + Parameters
     + id (required, number, `123`) ... Numeric `id` of the Counter to interact with.
 
-### Retrieve a counter value stream [GET]
+### Retrieve a counter value stream - TODO: convert to JSON [GET]
+
 + Response 200 (text/event-stream)
     + Header
             
@@ -115,7 +112,9 @@ The event stream of this counter's values
 
     + Body
 
-            0
-            1
-            2
-            3
+            data: {"min":0,"value":0,"max":5}
+
+            data: {"min":0,"value":1,"max":5}
+
+            data: {"min":0,"value":2,"max":5}
+
